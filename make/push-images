@@ -1,0 +1,11 @@
+#!/bin/bash
+set -ex
+
+DOCKER_REGISTRY=${DOCKER_REGISTRY:-docker.io}
+DOCKER_ORGANIZATION=${DOCKER_ORGANIZATION:-vikramraophil}
+
+echo "${DOCKER_PASS}" | docker login "${DOCKER_REGISTRY}" --username "${DOCKER_USER}" --password-stdin
+
+for img in $(docker images -f "reference=${DOCKER_ORGANIZATION}/*"  --format "{{.Repository}}:{{.Tag}}"); do
+  docker push $img
+done

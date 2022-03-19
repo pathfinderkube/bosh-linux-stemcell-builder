@@ -22,5 +22,9 @@ fissile-stemcell:
 fissile-boshrelease:
 	make/fissile-boshrelease
 
+.PHONY: push-images
+push-images:
+	make/push-images
+
 .PHONY: all
 all: os-image fissile-stemcell fissile-boshrelease
