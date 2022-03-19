@@ -1,0 +1,38 @@
+#!/bin/bash
+set -ex
+
+OS_NAME=${OS_NAME:-ubuntu}
+OS_VERSION=${OS_VERSION:-bionic}
+BOSH_STEMCELL_VERSION=${BOSH_STEMCELL_VERSION:-v1.65}
+STEMCELL_IMAGE="${STEMCELL_IMAGE:-fissile-stemcell-$OS_NAME}"
+STEMCELL_VERSION=${STEMCELL_VERSION:-$OS_VERSION-$BOSH_STEMCELL_VERSION}
+CF_DEPLOYMENT_VERSION=${CF_DEPLOYMENT_VERSION:-v17.1.0}
+CF_DEPLOYMENT_REPO=${CF_DEPLOYMENT_REPO:-https://github.com/cloudfoundry/cf-deployment.git}
+DOCKER_REGISTRY=${DOCKER_REGISTRY:-docker.io}
+DOCKER_ORGANIZATION=${DOCKER_ORGANIZATION:-vikramraophil}
+
+[ ! -d "build" ] && mkdir build/
+[ ! -d "build/cf-deployment" ] && git clone "$CF_DEPLOYMENT_REPO" build/cf-deployment
+
+pushd build/cf-deployment
+    git checkout tags/$CF_DEPLOYMENT_VERSION -b build-$CF_DEPLOYMENT_VERSION
+
+    for rel in $(yq e -j '.releases' cf-deployment.yml | jq -cr '.[]'); do
+      release_name=$(echo $rel | jq -r '.name' -)
+      release_url=$(echo $rel | jq -r '.url' -)
+      release_version=$(echo $rel | jq -r '.version' -)
+      release_sha=$(echo $rel | jq -r '.sha1' -)
+
+      build_args=(
+        "--stemcell=${STEMCELL_IMAGE}:${STEMCELL_VERSION}"
+        "--name=${release_name}"
+        "--version=${release_version}"
+        "--url=${release_url}"
+        "--sha1=${release_sha1}"
+        "--docker-registry=${registry}"
+        "--docker-organization=${organization}"
+      )
+
+      fissile build release-images "${build_args[@]}"
+    done
+popd

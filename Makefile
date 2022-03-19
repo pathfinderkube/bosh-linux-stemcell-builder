@@ -18,5 +18,9 @@ clean:
 fissile-stemcell:
 	make/fissile-stemcell
 
+.PHONY: fissile-boshrelease
+fissile-boshrelease:
+	make/fissile-boshrelease
+
 .PHONY: all
-all: os-image fissile-stemcell
+all: os-image fissile-stemcell fissile-boshrelease
