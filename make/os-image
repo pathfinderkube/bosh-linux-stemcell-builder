@@ -1,0 +1,52 @@
+#!/bin/bash
+set -ex
+
+SC_VERSION=$(git rev-parse --abbrev-ref HEAD | rev | cut -d "/" -f1 | rev)
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ROOT_DIR="$DIR/../"
+IMAGE_NAME="os-image-stemcell-builder-bionic"
+DOCKER_IMAGE=${DOCKER_IMAGE:-bosh/$IMAGE_NAME:$SC_VERSION}
+VERSION="${VERSION:-ubuntu,bionic}"
+OS_IMAGE="${OS_IMAGE:-ubuntu_bionic_os_image.tgz}"
+
+if [ ! -e "$ROOT_DIR/ci/docker/$IMAGE_NAME/VMware-ovftool-4.1.0-2459827-lin.x86_64.bundle" ];
+then
+    pushd $ROOT_DIR/ci/docker/$IMAGE_NAME/
+        wget 'https://github.com/richardatlateralblast/ottar/raw/master/VMware-ovftool-4.1.0-2459827-lin.x86_64.bundle'
+    popd
+fi
+
+# $UID is a readonly variable set by bash by default.
+NEW_UID="$UID"
+NEW_GID="$(id -g)"
+
+if [[ "$UID" == 0 ]]; then
+  echo "This script is not intended to be run as root..."
+  echo "Passing UID to container as 1000..."
+  NEW_UID=1000
+fi
+
+if [[ "$NEW_GID" == 0 ]]; then
+  echo "This script is not intended to be run as root..."
+  echo "Passing GID to container as 1000..."
+  NEW_GID=1000
+fi
+
+pushd $ROOT_DIR/ci/docker/$IMAGE_NAME/
+  docker build                      \
+    --build-arg USER_ID="$NEW_UID"  \
+    --build-arg GROUP_ID="$NEW_GID" \
+    -t "$DOCKER_IMAGE"              \
+    .
+popd
+
+exec docker run --rm --privileged \
+		     -e "VERSION=$VERSION" \
+                     -e "FILE=$OS_IMAGE" \
+		     -e LOCAL_USER_ID=$(id -u "$USER") \
+                     -v $ROOT_DIR/build:/opt/bosh/tmp \
+                     -v "$ROOT_DIR:/opt/bosh" \
+		     --workdir /opt/bosh \
+                     "--user=$NEW_UID:$NEW_GID" \
+		     -t -i "$DOCKER_IMAGE" \
+		     make deps build

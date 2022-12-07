@@ -1,0 +1,24 @@
+#!/bin/bash
+set -ex
+
+OS_NAME=${OS_NAME:-ubuntu}
+OS_VERSION=${OS_VERSION:-bionic}
+BASE_IMAGE=${BASE_IMAGE:-$OS_NAME-$OS_VERSION-os-image}
+BOSH_STEMCELL_VERSION=${BOSH_STEMCELL_VERSION:-v1.97}
+STEMCELL_BRANCH="${STEMCELL_BRANCH:-${OS_VERSION}_${BOSH_STEMCELL_VERSION}}"
+STEMCELL_VERSION=${STEMCELL_VERSION:-$OS_VERSION-$BOSH_STEMCELL_VERSION}
+OS_IMAGE="${OS_IMAGE:-ubuntu_bionic_os_image.tgz}"
+STEMCELL_IMAGE="${STEMCELL_IMAGE:-fissile-stemcell-$OS_NAME}"
+STEMCELL_DOCKER_REPO="${STEMCELL_DOCKER_REPO:-https://github.com/vikramraodp/fissile-stemcell-ubuntu.git}"
+
+docker import build/$OS_IMAGE $BASE_IMAGE
+
+[ ! -d "build" ] && mkdir build/
+[ ! -d "build/docker_stemcell" ] && git clone "$STEMCELL_DOCKER_REPO" build/docker_stemcell
+
+pushd build/docker_stemcell
+    git checkout $STEMCELL_BRANCH
+    docker build --build-arg base_image=$BASE_IMAGE --build-arg stemcell_version=$STEMCELL_VERSION . -t $STEMCELL_IMAGE:$STEMCELL_VERSION
+popd
+
+echo "Image built as: $STEMCELL_IMAGE:$STEMCELL_VERSION"

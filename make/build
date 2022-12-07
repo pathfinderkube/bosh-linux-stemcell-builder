@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -ex
+
+VERSION="${VERSION:-ubuntu,bionic}"
+FILE="${FILE:-os_ubuntu_bionic_base_image.tgz}"
+
+export SKIP_UID_CHECK=1
+mkdir -p $PWD/tmp
+bundle exec rake stemcell:build_os_image[$VERSION,$PWD/tmp/$FILE]
+sudo chown -R $LOCAL_USER_ID $PWD/tmp
